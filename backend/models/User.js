@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 
+// Define the User schema
 const UserSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -15,6 +16,7 @@ const UserSchema = new mongoose.Schema({
   name: {
     // Optional: You might want a user name field
     type: String,
+    required: true,
   },
   createdAt: {
     type: Date,
@@ -22,19 +24,37 @@ const UserSchema = new mongoose.Schema({
   },
 });
 
-// Hash password before saving
 UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
+  const user = this;
+
+  // Hash the password only if it has been modified (or is new)
+  if (!user.isModified("password")) return next();
+
+  try {
+    // hash password generation
+    const salt = await bcrypt.genSalt(10);
+
+    // hash password
+    const hashedPassword = await bcrypt.hash(user.password, salt);
+
+    // Override the plain password with the hashed one
+    user.password = hashedPassword;
     next();
+  } catch (err) {
+    return next(err);
   }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
-// Method to compare passwords
-UserSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+UserSchema.methods.comparePassword = async function (candidatePassword) {
+  try {
+    // Use bcrypt to compare the provided password with the hashed password
+    const isMatch = await bcrypt.compare(candidatePassword, this.password);
+    return isMatch;
+  } catch (err) {
+    throw err;
+  }
 };
 
-module.exports = mongoose.model("User", UserSchema);
+// Create User model
+const User = mongoose.model("User", UserSchema);
+module.exports = User;
