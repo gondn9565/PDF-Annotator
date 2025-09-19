@@ -16,7 +16,8 @@ app.use(cors()); // Enable CORS
 app.get("/", (req, res) => {
   res.send("PDF Annotator Backend is Running!");
 });
-
+//ROute
+app.use("/api/auth", require("./routes/authRoutes"));
 // Define a port
 const PORT = process.env.PORT || 5000;
 
